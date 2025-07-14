@@ -3,6 +3,8 @@ import { Atom } from './atoms.js';
 
 let renderer, scene, camera, raycaster;
 
+const atom = new Atom(79, 118, 79); // Example: 1 Proton, 1 Neutron, 28 Electrons
+
 init();
 animate();
 
@@ -16,7 +18,7 @@ function init() {
     camera = new THREE.PerspectiveCamera(
         75, window.innerWidth / window.innerHeight, 0.1, 1000
     );
-    camera.position.set(0, 20, 60);
+    camera.position.set(0, 0, 60);
 
     // Renderer setup
     renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -24,7 +26,7 @@ function init() {
     document.body.appendChild(renderer.domElement);
 
     // Example: Atom creation
-    const atom = new Atom(1, 1, 2); // 1 Proton, 1 Neutron, 2 Electrons
+    // const atom = new Atom(1, 1, 28); // 1 Proton, 1 Neutron, 2 Electrons
     atom.position.set(0, 0, 0);
     scene.add(atom);
     
@@ -46,5 +48,7 @@ function onWindowResize() {
 }
 
 function render() {
+    const time = performance.now() * 0.001;
+    atom.update(time);
     renderer.render(scene, camera);
 }
