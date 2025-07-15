@@ -3,7 +3,12 @@ import { Atom } from './atoms.js';
 
 let renderer, scene, camera, raycaster;
 
-const atom = new Atom(79, 118, 79); // Example: 1 Proton, 1 Neutron, 28 Electrons
+const atom = new Atom(
+    "h",
+    "hydrogen",
+    1,
+    0,
+    [2]); // Symbol, name, atomic number, neutrons, electrons 79, 118, 79
 
 init();
 animate();
@@ -30,8 +35,7 @@ function init() {
     atom.position.set(0, 0, 0);
     scene.add(atom);
     
-
-
+    // EventListeners
     window.addEventListener('resize', onWindowResize);
 }
 
@@ -50,5 +54,6 @@ function onWindowResize() {
 function render() {
     const time = performance.now() * 0.001;
     atom.update(time);
+    atom.arrangeElectrons2D();
     renderer.render(scene, camera);
 }
