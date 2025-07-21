@@ -32,7 +32,7 @@ function init() {
 
     // Camera setup
     camera = new THREE.PerspectiveCamera(
-        80, window.innerWidth / window.innerHeight, 0.1, 1000
+        100, window.innerWidth / window.innerHeight, 0.1, 1000
     );
     camera.position.set(0, 0, 50);
     //----------------------------------------------------------------------------------
@@ -40,7 +40,7 @@ function init() {
     //Orbit Controls
     controls = new OrbitControls(camera, renderer.domElement);
     controls.mouseButtons = { LEFT: THREE.MOUSE.ROTATE, MIDDLE: THREE.MOUSE.DOLLY };
-    controls.minDistance = 50;
+    controls.minDistance = 10;
     controls.maxDistance = 1000;
     controls.maxPolarAngle = THREE.MathUtils.degToRad(90);
     controls.panSpeed = 1;
