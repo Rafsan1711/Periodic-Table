@@ -1,6 +1,6 @@
 import * as THREE from './node_modules/three';
 import { Atom } from './atoms.js';
-import { OrbitControls } from './node_modules/three/examples/jsm/Addons.js';
+import { OrbitControls } from './node_modules/three/examples/jsm/controls/OrbitControls.js';
 
 let renderer, scene, camera, controls,raycaster;
 
