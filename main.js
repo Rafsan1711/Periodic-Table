@@ -11,8 +11,7 @@ let mouseDown = false;
 let mouseMoved = false;
 let mouseDownPos = { x: 0, y: 0 };
 
-const boxPositionsArray = boxPositions();
-const atomBoxes = addAtomBoxes(boxPositionsArray)
+let currentAtom = null;
 
 init();
 animate();
@@ -22,18 +21,23 @@ function init() {
 
     // Scene setup
     scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xff9ce6);
+    //----------------------------------------------------------------------------------
+    
+    // Renderer setup
+    const container = document.getElementById('atom-3d');
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    container.appendChild(renderer.domElement);
+    //----------------------------------------------------------------------------------
 
     // Camera setup
     camera = new THREE.PerspectiveCamera(
         80, window.innerWidth / window.innerHeight, 0.1, 1000
     );
     camera.position.set(0, 0, 50);
-
-    // Renderer setup
-    renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    document.body.appendChild(renderer.domElement);
-
+    //----------------------------------------------------------------------------------
+    
     //Orbit Controls
     controls = new OrbitControls(camera, renderer.domElement);
     controls.mouseButtons = { LEFT: THREE.MOUSE.ROTATE, MIDDLE: THREE.MOUSE.DOLLY };
@@ -41,15 +45,11 @@ function init() {
     controls.maxDistance = 1000;
     controls.maxPolarAngle = THREE.MathUtils.degToRad(90);
     controls.panSpeed = 1;
-
-    // Example: Atom creation
-    // atomBoxes.forEach(function(box){
-    //     scene.add(box)
-    // });
+    //----------------------------------------------------------------------------------    
     
     // EventListeners
     window.addEventListener('resize', onWindowResize);
-
+    //----------------------------------------------------------------------------------
     document.addEventListener('mousedown', (event) => {
     mouseDown = true;
     mouseMoved = false;
@@ -70,7 +70,88 @@ function init() {
             onClick(event);
         }
     });
+    //----------------------------------------------------------------------------------
 
+    // Listen for clicks on periodic table elements
+    document.querySelectorAll('.element').forEach(el => {
+        el.addEventListener('click', () => {
+            // Get element data
+            const symbol = el.getAttribute('data-symbol');
+            const name = el.getAttribute('title');
+            const atomicNumber = parseInt(el.getAttribute('data-number'));
+            // For demo, neutrons = atomicNumber (real data would be better)
+            const atomicWeight = parseFloat(el.getAttribute('data-weight')) || atomicNumber;
+            const neutrons = atomicWeight - atomicNumber;
+
+            // Remove previous atom from scene
+            if (currentAtom) {
+                scene.remove(currentAtom);
+            }
+
+            // Create and add new atom
+            currentAtom = new Atom(symbol, name, atomicNumber, neutrons);
+            currentAtom.position.set(0, 0, 0);
+            scene.add(currentAtom);
+
+            // Show sidebar and update info
+            document.getElementById('sidebar').classList.add('active');
+            showAtomInfo(symbol, name, atomicNumber, atomicWeight);
+            fetchWikipediaInfo(name);
+        });
+    });
+
+    document.getElementById('close-sidebar').addEventListener('click', () => {
+        document.getElementById('sidebar').classList.remove('active');
+        if (currentAtom) {
+            scene.remove(currentAtom);
+            currentAtom = null;
+        }
+    });
+
+    document.addEventListener('mousedown', (event) => {
+        const sidebar = document.getElementById('sidebar');
+        const periodicTable = document.querySelector('.periodic-table');
+        // If sidebar is open, and click is outside sidebar and not on a periodic table element
+        if (
+            sidebar.classList.contains('active') &&
+            !sidebar.contains(event.target) &&
+            !(event.target.closest('.element'))
+        ) {
+            sidebar.classList.remove('active');
+            if (currentAtom) {
+                scene.remove(currentAtom);
+                currentAtom = null;
+            }
+        }
+    });
+
+    document.getElementById('toggle-arranged').addEventListener('change', () => {
+        render();
+    });
+
+    onWindowResize();
+}
+
+function onWindowResize() {
+    const container = document.getElementById('atom-3d');
+    const width = container.clientWidth;
+    const height = container.clientHeight;
+    camera.aspect = width / height;
+    camera.updateProjectionMatrix();
+    renderer.setSize(width, height, false);
+}
+
+function render() {
+    const time = performance.now() * 0.001;
+    if (currentAtom) {
+        const arranged = document.getElementById('toggle-arranged').checked;
+        if (arranged && typeof currentAtom.arrangeElectrons2D === 'function') {
+            currentAtom.arrangeElectrons2D();
+        } else {
+            currentAtom.update(time);
+        }
+    }
+    renderer.render(scene, camera);
 }
 
 function animate() {
@@ -78,33 +159,26 @@ function animate() {
     render();
 }
 
-function onWindowResize() {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
+function showAtomInfo(symbol, name, atomicNumber, atomicWeight) {
+    document.getElementById('atom-symbol').textContent = symbol;
+    document.getElementById('atom-name').textContent = name;
+    document.getElementById('atom-number').textContent = `Atomic Number: ${atomicNumber}`;
+    document.getElementById('atom-weight').textContent = `Atomic weight: ${atomicWeight}`;
 }
 
-function render() {
-    const time = performance.now() * 0.001;
-    // atom.update(time);
-    // atom.arrangeElectrons2D();
-    renderer.render(scene, camera);
-}
-
-function boxPositions(){
-    const positions = [];
-    const rows = 19;
-    const cols = 10;
-    const spacing = 11; // Adjust spacing as needed
-
-    for (let i = 0; i < rows; i++) {
-        for (let j = 0; j < cols; j++) {
-            positions.push(new THREE.Vector3(
-                (i - rows / 2) * spacing,
-                (j - cols / 2) * spacing,
-                -50
-            ));
-        }
-    }
-    return positions;
+function fetchWikipediaInfo(name) {
+    const wikiDiv = document.getElementById('atom-wiki');
+    wikiDiv.textContent = 'Loading Wikipedia info...';
+    fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(name)}`)
+        .then(res => res.json())
+        .then(data => {
+            if (data.extract) {
+                wikiDiv.innerHTML = `<p>${data.extract}</p><a href="https://en.wikipedia.org/wiki/${encodeURIComponent(name)}" target="_blank">Read more on Wikipedia</a>`;
+            } else {
+                wikiDiv.textContent = 'No Wikipedia info found.';
+            }
+        })
+        .catch(() => {
+            wikiDiv.textContent = 'Failed to load Wikipedia info.';
+        });
 }
